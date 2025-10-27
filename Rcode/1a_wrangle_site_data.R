@@ -5,24 +5,15 @@
 #
 # Purpose: This script is written to import all site data as this contains
 # all males (observed as well as observed and tissue sampled).
-# subset raw datafiles to include male data only
-# so that we do not have to publish the entire raw microsatellite data.
-# Here we generate three files:
-# - list_of_all_genotyped_males.xlsx: IDs of recaptured males incl Matches information
-# - male_pups_pheno_data.xlsx: fitness data for male pups
-# - sMLH_msats_male_pups.xlsx: sMLH calculated for 9 and 39 loci for male pups
 #
-# Date: 2025-09-16
+# NB Start script at 337 if you want to skip loading the raw data!!!
+#
 # -----------------------------------------------------------
-
-# NB Start script at 250 if you want to skip loading the raw data!!!
 
 
 library(here)
 library(readxl)
 library(tidyverse)
-
-#i_am(path="Rcode/NatalPhilopatry/2_explore_site_data.R")
 
 
 
@@ -30,7 +21,7 @@ library(tidyverse)
 #  Raw male location data 1994-2006  ####
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
-# 1994-2005
+# 1994-2006
 read_excel_allsheets <- function(filename) {
   # I prefer straight data.frames
   # but if you like tidyverse tibbles (the default with read_excel)
@@ -117,20 +108,26 @@ for (i in c(1:6, 8, 9)) {
   raw_pos94[[i]] <- raw_pos94[[i]][! keep.cols]
   
   raw_pos94[[i]] <- raw_pos94[[i]] %>%
-    .[colSums(!is.na(.)) > 0] %>% # remove empty columns
+    #.[colSums(!is.na(.)) > 0] %>% # remove empty columns - this occasionally removes column in the beginning or end of season
     .[rowSums(!is.na(.)) > 0, ] # remove empty rows
   
   # Unite columns with ID
   raw_pos94[[i]] <- raw_pos94[[i]] %>% unite("SampleID", V1:V2, sep = "")
+  
+  # Fix duplicate AGM95076
+  # The one the rocks has a tag ID (G460) that fits with an individual from '97 and is also a genetic match with that ID. So the DNA must belong to that individual
+  # The other one has a flipper tag that fits with another individual from '94, but that ID from 94 is not a genetic match with any other sample
+  if(i == 2) {raw_pos94[[i]][which(raw_pos94[[i]]$SampleID == "AGM95076" & raw_pos94[[i]]$`35040` == "1907"), "SampleID"] <- "NOTAGM95076"}
   
   # Remove extra columns in 2001/02
   if(i == 8) {raw_pos94[[i]] <- raw_pos94[[i]] %>% select(-c(`2001 sample`, `tussock only`, `TW only`))}
   
   # Select only columns of interest
   first_col <- grep("^[[:digit:]]", colnames(raw_pos94[[i]]))[1]
+  last_c <- tail(grep("^[[:digit:]]", colnames(raw_pos94[[i]])), n = 1)
   
   raw_pos94[[i]] <- raw_pos94[[i]] %>%
-    select(SampleID, all_of(first_col):last_col())
+    select(SampleID, all_of(first_col):all_of(last_c))
   
 }
 
@@ -141,14 +138,15 @@ for (i in 7:7) {
   raw_pos94[[i]] <- raw_pos94[[i]][! keep.cols]
   
   raw_pos94[[i]] <- raw_pos94[[i]] %>%
-    .[colSums(!is.na(.)) > 0] %>% # remove empty columns
+    #.[colSums(!is.na(.)) > 0] %>% # remove empty columns
     .[rowSums(!is.na(.)) > 0, ] # remove empty rows
   
   # Select only columns of interest
   first_col <- grep("^[[:digit:]]", colnames(raw_pos94[[i]]))[1]
+  last_c <- tail(grep("^[[:digit:]]", colnames(raw_pos94[[i]])), n = 1)
   
   raw_pos94[[i]] <- raw_pos94[[i]] %>%
-    select(SampleID, all_of(first_col):last_col())
+    select(SampleID, all_of(first_col):all_of(last_c))
   
 }
 
@@ -158,7 +156,7 @@ for (i in 10:13) {
   raw_pos94[[i]] <- raw_pos94[[i]][! keep.cols]
   
   raw_pos94[[i]] <- raw_pos94[[i]] %>%
-    .[colSums(!is.na(.)) > 0] %>% # remove empty columns
+    #.[colSums(!is.na(.)) > 0] %>% # remove empty columns
     .[rowSums(!is.na(.)) > 0, ] # remove empty rows
   
   # Unite columns with ID
@@ -166,9 +164,10 @@ for (i in 10:13) {
   
   # Select only columns of interest
   first_col <- grep("^[[:digit:]]", colnames(raw_pos94[[i]]))[1]
+  last_c <- tail(grep("^[[:digit:]]", colnames(raw_pos94[[i]])), n = 1)
   
   raw_pos94[[i]] <- raw_pos94[[i]] %>%
-    select(SampleID, all_of(first_col):last_col())
+    select(SampleID, all_of(first_col):all_of(last_c))
   
 }
 
@@ -233,6 +232,9 @@ files <- files[grepl(paste0("^", here("Data", "raw", "MaleLocations"), "/M"), fi
 # 2006/2007 already included from the other file
 files <- files[!grepl(paste0("^", here("Data", "raw", "MaleLocations"), "/Males06"), files)]
 
+# 2010/2011 twice in there. Take most recent one
+files <- files[!grepl(paste0("^", here("Data", "raw", "MaleLocations"), "/Males10"), files)]
+
 pos_long_total07 <- NULL
 counter = 0
 
@@ -254,18 +256,32 @@ for (i in files){
     #filter(!grepl("Total", 1)) %>%
     #`colnames<-`(.[1, ]) %>%
     #.[-1, ] %>% # removes first row (containing headers)
-    .[colSums(!is.na(.)) > 0] %>% # remove empty columns
+    #.[colSums(!is.na(.)) > 0] %>% # remove empty columns
     .[rowSums(!is.na(.)) > 0, ] %>% # remove empty rows
     rename(SampleID = `Serial Number`)
   
   # Select only columns of interest, convert to date and pivot longer
   first_col <- grep("^[[:digit:]]", colnames(raw_pos))[1]
+  last_c <- tail(grep("^[[:digit:]]", colnames(raw_pos)), n = 1)
   
   counter = counter + 1
   
+  # Fix mistake in 2017: AGM17015 twice (once as AGM17009 + AGM17015), the second one must be 16
+  # AGM17009 and AGM17015 are indeed a genetic match and also a genetic match with AGM18011 which has the same PIT tag ID
+  # AGM17016 is missing in the raw location data, but we have a genetic sample for this individual (which is different from AGM17015)
+  # Therefore I assume that the second AGM17015 must be AGM17016
+  if(i == "C:/Uni/13-MaleRecruitment/Data/raw/MaleLocations/Males_17_18.xlsx") {
+    raw_pos[which(raw_pos$SampleID == "AGM17015"), "SampleID"] <- "AGM17016"
+  }
+  
+  # Fix mistake in 2020: AGM20022 twice, the first one must be 21 based on PIT tag info
+  if(i == "C:/Uni/13-MaleRecruitment/Data/raw/MaleLocations/Males_20_21.xlsx") {
+    raw_pos[which(raw_pos$SampleID == "AGM20022" & is.na(raw_pos$`PIT tag`)), "SampleID"] <- "AGM20021"
+  }
+  
   pos_long <- raw_pos %>%
     mutate(SampleID = ifelse(is.na(SampleID) | SampleID == "-", paste0("dummyID", counter, "_", row_number()), SampleID)) %>%
-    select(SampleID, all_of(first_col):last_col()) %>%
+    select(SampleID, all_of(first_col):all_of(last_c)) %>%
     pivot_longer(!SampleID, names_to = "Date", values_to = "Location", values_transform = list(Location = as.character)) 
   
   pos_long_total07 <- rbind(pos_long_total07, pos_long)
@@ -425,13 +441,16 @@ pos_long_total4 <- pos_long_total3 %>%
   mutate(SampleID = gsub("\\)", "", SampleID)) %>% 
   mutate(SampleID = gsub("  ", " ", SampleID)) %>% 
   separate(SampleID, c("SampleID", "SampleID2"), sep = " AND ", remove = F) %>%
-  mutate(SampleID = ifelse(SampleID == "AGM01147/8", "AGM01147", SampleID)) %>%
-  mutate(SampleID2 = ifelse(SampleID == "AGM01147", "AGM01148", SampleID2)) 
+  mutate(SampleID = ifelse(SampleID == "AGM03046 PATX1", "AGM03046", SampleID)) %>%
+  mutate(SampleID2 = ifelse(SampleID2 == "AGM03056 PATX1", "AGM03056", SampleID2)) %>%
+  mutate(SampleID2 = ifelse(SampleID2 == "034", "AGM98034", SampleID2)) %>%
+  mutate(SampleID = ifelse(SampleID == "AGM01147", "AGM01147/8", SampleID)) #%>% # The tissue is called also 7/8
+  #mutate(SampleID2 = ifelse(SampleID == "AGM01147", NA, SampleID2)) 
 
 #pos_long_total3[grepl("\\=", pos_long_total3$SampleID),]
 
 #~~ Save cleaned data to avoid rerunning loop above and for use in other project
-saveRDS(pos_long_total, file = here("data", "Processed", "clean_pos_data_obs.Rds"))
+saveRDS(pos_long_total4, file = here("data", "Processed", "clean_pos_data_obs.Rds"))
 
 
 
@@ -456,9 +475,16 @@ pos_long_total5 <- left_join(pos_long_total4, unique_ID, by = c("SampleID" = "du
   rename(uniqueID2 = uniqueID, uniqueID = uniqueID1)
 
 # Check mismatching uniqueIDs
-View(pos_long_total5 %>% filter(!is.na(uniqueID) & !is.na(uniqueID2) & uniqueID != uniqueID2))
-# Mistake found: AGM06079 is not the same individual as AGM06085!
-# Question, does the location data belong to AGM06079 or 85...?
+# View(pos_long_total5 %>% filter(!is.na(uniqueID) & !is.na(uniqueID2) & uniqueID != uniqueID2))
+
+# Mistake found: AGM06079 is not the same individual as AGM06085, separate data based on raw location data file
+pos_long_total5 <- pos_long_total5 %>%
+  mutate(SampleID = ifelse((SampleID == "AGM06079" & Date!="2006-12-02") & (SampleID == "AGM06079" & Date!="2006-12-03"), "AGM06085", SampleID)) %>%
+  mutate(uniqueID = ifelse(SampleID == "AGM06085", uniqueID2, uniqueID)) %>%
+  mutate(SampleID2 = ifelse(SampleID == "AGM06079", NA, SampleID2)) %>%
+  mutate(uniqueID2 = ifelse(SampleID == "AGM06079", NA, uniqueID2)) %>%
+  mutate(SampleID2 = ifelse(SampleID == "AGM06085", NA, SampleID2)) %>%
+  mutate(uniqueID2 = ifelse(SampleID == "AGM06085", NA, uniqueID2))
 
 # Annual male counts
 n_males <- pos_long_total5 %>%
@@ -488,7 +514,7 @@ n_males <- n_males %>%
 # n unique observed and genotyped males 
 # For observed only males (ie not tissue sampled), as long as we do not have the trains data, 
 # different IDs are considered to be different individuals
-nrow(n_males %>% distinct(uniqueID)) # 1766
+nrow(n_males %>% distinct(uniqueID)) # 1767
 
 n_obs_males <- n_males %>%
   group_by(Season) %>% 
