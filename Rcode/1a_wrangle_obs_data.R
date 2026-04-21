@@ -1,12 +1,18 @@
 # -----------------------------------------------------------
 # Author: A.J. Paijmans
 #
-# Script Name: 1a_wrangle_site_data.R
+# Script Name: 1a_wrangle_obs_data.R
 #
-# Purpose: This script is written to import all site data as this contains
-# all males (observed as well as observed and tissue sampled).
+# Purpose: This script is written to import all observational 
+# location data of the adult males. This contains all males 
+# (observed only as well as observed and tissue sampled). This 
+# is then used to calculate the number of observed males per year.
+# It also adds the SAM index to the observed counts.
+# The saved df "n_observed_males.xlsx" is further used in 
+# scripts "2_explore_data_n_males.R" and "3_stats_n_males".
 #
-# NB Start script at 337 if you want to skip loading the raw data!!!
+# NB Start script at 335 if you want to skip loading the raw data!!!
+# or 458 if you want to skip cleaning the data
 #
 # -----------------------------------------------------------
 
@@ -100,7 +106,7 @@ raw_pos94[[12]] <- raw_pos94[[12]][-1,]
 raw_pos94[[13]] <- raw_pos94[[13]][-1,]
 
 
-#~~ Loop through dataframes to unite two columns with ID info and remove extra cols and rows
+#~~ Loop through data frames to unite two columns with ID info and remove extra cols and rows
 for (i in c(1:6, 8, 9)) {
   
   # Remove columns with empty headers
@@ -131,7 +137,8 @@ for (i in c(1:6, 8, 9)) {
   
 }
 
-#~~ Loop through dataframes and remove extra cols and rows
+
+#~~ Loop through data frames and remove extra cols and rows
 for (i in 7:7) {
   # Remove columns with empty headers
   keep.cols <- names(raw_pos94[[i]]) %in% c(NA)
@@ -213,11 +220,11 @@ pos_long_total94rest[which(is.na(
 # however case_when also gave warnings. I therefore decided to split the df and do the conversion separatly
 
 pos_long_total94a <-rbind(pos_long_total94num %>% 
-                               mutate(DateClean = as_date(as_date(as.numeric(Date), origin = "1899-12-30"))),
-                             pos_long_total94rest %>% 
-                               mutate(DateClean = as_date(Date, format = "%d-%b-%y"))) %>%
-                           arrange(rown) %>%
-                           select(-rown)
+                            mutate(DateClean = as_date(as_date(as.numeric(Date), origin = "1899-12-30"))),
+                          pos_long_total94rest %>% 
+                            mutate(DateClean = as_date(Date, format = "%d-%b-%y"))) %>%
+  arrange(rown) %>%
+  select(-rown)
 
 
 
@@ -288,6 +295,7 @@ for (i in files){
   
 }
 
+
 #~~ Check when converting variables if and what data is lost
 pos_long_total07num <- pos_long_total07 %>%
   mutate(rown = row_number()) %>%
@@ -306,15 +314,6 @@ pos_long_total07rest[which(is.na(
 
 
 #~~ Convert dates
-
-# Check above did not give warnings, however code below still does
-# pos_long_total94 <- pos_long_total94 %>% 
-#   mutate(DateClean = as_date(ifelse(grepl("^[0-9\\.]+$", Date), 
-#                                   as.numeric(Date) %>% as_date(origin = "1899-12-30") %>% as_date(), 
-#                                   as_date(Date, format = "%d-%b-%y"))))
-# could be to do with ifelse trying to evaluate both branches,
-# however case_when also gave warnings. I therefore decided to split the df and do the conversion separatly
-
 pos_long_total07a <-rbind(pos_long_total07num %>% 
                             mutate(DateClean = as_date(as_date(as.numeric(Date), origin = "1899-12-30"))),
                           pos_long_total07rest %>% 
@@ -336,7 +335,8 @@ saveRDS(pos_long_total, file = here("data", "Processed", "raw_pos_data_obs.Rds")
 #  Post import clean up  ####
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
-# Load data
+
+#~~ Load data
 pos_long_total <- readRDS(file = here("data", "Processed", "raw_pos_data_obs.Rds"))
 
 # Any dummyIDs without locations at all?
@@ -349,7 +349,7 @@ to_remove <- pos_long_total %>%
   group_by(SampleID) %>% 
   filter(all(is.na(Location))) %>% 
   distinct(SampleID)
-# Remove all of them, except the 98 ones. For only 35 males locations were recorded, however, 
+# Remove all of them, except the '98 ones. For only 35 males locations were recorded, however, 
 # the field ledgers seem to indicate that although they weren't tissue sampled or location recorded, 
 # more individuals were there (quite a few have a AGM of the year before or tag noted, for example)
 # NB for the other years only males with at least one recorded location were included as those would be
@@ -362,7 +362,6 @@ to_remove %>%
   filter(id_nchar != 8) %>%
   select(SampleID) 
 # all except 1 are anyway from 1998 and thus maintained and for the last one we have no genetic info for either of the IDs
-# So not worth to try to recover
 
 to_remove <- to_remove %>% 
   filter(!grepl("^AGM98", SampleID))
@@ -371,13 +370,11 @@ pos_long_total <- pos_long_total[!pos_long_total$SampleID %in% to_remove$SampleI
 
 # Cleanup and fixing mistakes in dates
 pos_long_total2 <- pos_long_total %>%
-  # at the moment we have no info about the data with missing sample ID (ie "dummy")
-  # remove for now
-  filter(!grepl("^dummyID", SampleID)) %>%
-  filter(!grepl("^-", SampleID)) %>%
+  # there is no info about individuals with missing sample ID (ie "dummy")
+  # keep to include in observation counts (there was a male present)
+  #filter(!grepl("^dummyID", SampleID)) %>%
   filter(!grepl("S", SampleID)) %>%
   filter(!grepl("NANA", SampleID)) %>%
-  filter(!grepl("# NONA", SampleID)) %>%
   mutate(SampleID = sub("AMG", "AGM", SampleID)) %>%
   mutate(Year = as.numeric(format(as.Date(DateClean, format="%d/%m/%y"),"%Y"))) %>%
   mutate(Mo = as.numeric(format(as.Date(DateClean, format="%d/%m/%y"),"%m"))) %>%
@@ -388,6 +385,7 @@ pos_long_total2 <- pos_long_total %>%
   mutate(SamplingYear = paste(pre, SamplingYear, sep = "")) %>%
   mutate(SamplingYear = substr(SamplingYear, 1, 4)) %>%
   mutate(SamplingYear = as.numeric(SamplingYear)) %>%
+  mutate(SamplingYear = ifelse(grepl("^dummyID", SampleID), Season, SamplingYear)) %>% 
   # Check
   mutate(CheckYear = ifelse(SamplingYear != Season, "WRONG", NA)) %>%
   # pos_long_total2 %>% filter(CheckYear=="WRONG") %>% group_by(Season, SamplingYear) %>% tally()
@@ -401,6 +399,7 @@ pos_long_total2 <- pos_long_total %>%
   mutate(SeasonNew = ifelse(Season == 2008 & SamplingYear == 2009, 2009, SeasonNew)) %>% # dates for 2009 were all wrong in the raw data file
   mutate(SeasonNew = ifelse(Season == 2012 & SamplingYear == 2013, 2013, SeasonNew)) %>% # dates for 2013 were all wrong in the raw data file
   mutate(SeasonNew = ifelse(Season == 2018 & SamplingYear == 2019, 2019, SeasonNew)) %>% # dates for 2019 were all wrong in the raw data file
+  #mutate(FinalDate = as.Date(ifelse(grepl("^dummyID", SampleID), DateClean, NA), origin = "1970-01-01")) %>%
   mutate(FinalDate = as.Date(ifelse(Season == 1995 & SamplingYear == 1996, DateClean %m+% years(1), DateClean), origin = "1970-01-01")) %>%
   mutate(FinalDate = as.Date(ifelse(Season == 1995 & SamplingYear == 1997, DateClean %m+% years(2), FinalDate), origin = "1970-01-01")) %>%
   mutate(FinalDate = as.Date(ifelse(Season == 1996 & SamplingYear == 1997, DateClean %m+% years(1), FinalDate), origin = "1970-01-01")) %>%
@@ -445,9 +444,10 @@ pos_long_total4 <- pos_long_total3 %>%
   mutate(SampleID2 = ifelse(SampleID2 == "AGM03056 PATX1", "AGM03056", SampleID2)) %>%
   mutate(SampleID2 = ifelse(SampleID2 == "034", "AGM98034", SampleID2)) %>%
   mutate(SampleID = ifelse(SampleID == "AGM01147", "AGM01147/8", SampleID)) #%>% # The tissue is called also 7/8
-  #mutate(SampleID2 = ifelse(SampleID == "AGM01147", NA, SampleID2)) 
+#mutate(SampleID2 = ifelse(SampleID == "AGM01147", NA, SampleID2)) 
 
 #pos_long_total3[grepl("\\=", pos_long_total3$SampleID),]
+
 
 #~~ Save cleaned data to avoid rerunning loop above and for use in other project
 saveRDS(pos_long_total4, file = here("data", "Processed", "clean_pos_data_obs.Rds"))
@@ -458,13 +458,17 @@ saveRDS(pos_long_total4, file = here("data", "Processed", "clean_pos_data_obs.Rd
 #  Check duplicate IDs within seasons  ####
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
+
+#~~ Load data
+pos_long_total4 <- readRDS(file = here("data", "Processed", "clean_pos_data_obs.Rds"))
+
 # Some individuals were sampled twice (or more) within one season
-# Here I remove those duplicates, while keeping all observed IDs 
-# as without genetic checking, it is unknown whether these are different individuals
+# Here I remove those duplicates, while keeping all observed (non-sampled) IDs. 
+# Because without genetic checking, it is unknown whether these are different individuals
 # or not. So I assume that non-sampled individuals with different IDs are different individuals
 
 # Load all_genotypes dataframe, selecting unique IDs
-unique_ID <- read_excel(here("Data", "raw", "list_of_all_genotyped_males.xlsx"),
+unique_ID <- read_excel(here("Data", "raw", "all_msat_genotypes_uniqueID.xlsx"),
                         guess_max = 15000) %>%
   distinct(uniqueID, dummyID, Matches)
 
@@ -512,9 +516,8 @@ n_males <- n_males %>%
   distinct(uniqueID, Season)
 
 # n unique observed and genotyped males 
-# For observed only males (ie not tissue sampled), as long as we do not have the trains data, 
-# different IDs are considered to be different individuals
-nrow(n_males %>% distinct(uniqueID)) # 1767
+# For observed only males (ie not tissue sampled), different IDs are considered to be different individuals
+nrow(n_males %>% distinct(uniqueID)) # 1954
 
 n_obs_males <- n_males %>%
   group_by(Season) %>% 
@@ -526,12 +529,16 @@ n_obs_males <- n_males %>%
 #  Add SAM index to male annual counts  ####
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
-# Add SAM index to the df with male counts per year
+
+#~~ Add SAM index to the df with male counts per year
 sam_index <- read.table(here("data", "raw", "newsam.1957.2007.seas.txt"), header = T) %>%
   rownames_to_column("year") %>%
   mutate(year = as.numeric(year)) %>%
   mutate(annual_mean = as.numeric(ANN)) %>%
   select(year, annual_mean)
+
+# Simple LM
+summary(lm(sam_index$annual_mean ~ sam_index$year))
 
 # Year and SAM are correlated. Create detrended SAM variable (= residuals from the lm on SAM)
 detrend <- function(x) resid(lm(x ~ seq(x)))
@@ -545,6 +552,7 @@ n_obs_males <- n_obs_males %>%
 # Breeding seasons are referred to by the year in which they ended
 n_obs_males2 <- n_obs_males %>%
   mutate(SamplingYear = SamplingYear + 1) 
+
 
 #~~ Save df
 openxlsx::write.xlsx(n_obs_males2, here("Data", "Processed", "n_observed_males.xlsx"))         
