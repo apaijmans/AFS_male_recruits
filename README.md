@@ -4,7 +4,7 @@
 
 This repository contains the R code used to analyse male recruitment patterns in Antarctic fur seals, including the effects of early-life environmental conditions and climate variability (SAM) on male counts and recruitment.
 
-The input data for this analysis were produced by a recapture analysis maintained in a [separate repository](https://github.com/apaijmans/AFS_recaptures/). All input data are available via Zenodo: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19680323.svg)](https://doi.org/10.5281/zenodo.19680323)
+The input data for this analysis were produced by a recapture analysis maintained in a [separate repository](https://github.com/apaijmans/AFS_recaptures/). All input data are available via Zenodo: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19680323.svg)](https://doi.org/10.5281/zenodo.19680323) 
 
 The Zenodo repository contains the following input files:
 - `all_msat_genotypes_uniqueID.xlsx` — microsatellite genotypes with duplicate individuals flagged
