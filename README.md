@@ -32,7 +32,6 @@ Download the complete repository. Before running the scripts, download the input
 | `3a_stats_n_males.R` | Runs GLMs testing the effects of year and SAM on male counts (modelled separately due to collinearity). Produces Tables 1a and 1b. |
 | `3b_stats_recruitment.R` | Runs GLMs testing the effects of various predictors on male recruitment, including a temporal model (year) and a full model (SAM and other predictors). Also tests for a cohort effect on recruitment age before and after 2009. Produces Tables 2a and 2b and all panels for Fig. 2. Final figure aesthetics are handled in `4_figs.R`. |
 | `4_figs.R` | Applies final aesthetics to figure panels and combines them to produce Figs. 1 and 2. |
-```
 
 ## Repository Structure
 
