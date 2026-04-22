@@ -54,6 +54,7 @@ AFS_male_recruits/
 ```
 
 ## Citation
-    Citation will be added upon publication.
+
+Citation will be added upon publication.
 
 This repository is licensed under the MIT License.
