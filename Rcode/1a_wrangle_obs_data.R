@@ -277,12 +277,12 @@ for (i in files){
   # AGM17009 and AGM17015 are indeed a genetic match and also a genetic match with AGM18011 which has the same PIT tag ID
   # AGM17016 is missing in the raw location data, but we have a genetic sample for this individual (which is different from AGM17015)
   # Therefore I assume that the second AGM17015 must be AGM17016
-  if(i == "C:/Uni/13-MaleRecruitment/Data/raw/MaleLocations/Males_17_18.xlsx") {
+  if(grepl("Males_17_18.xlsx", i)) {
     raw_pos[which(raw_pos$SampleID == "AGM17015"), "SampleID"] <- "AGM17016"
   }
   
   # Fix mistake in 2020: AGM20022 twice, the first one must be 21 based on PIT tag info
-  if(i == "C:/Uni/13-MaleRecruitment/Data/raw/MaleLocations/Males_20_21.xlsx") {
+  if(grepl("Males_20_21.xlsx", i)) {
     raw_pos[which(raw_pos$SampleID == "AGM20022" & is.na(raw_pos$`PIT tag`)), "SampleID"] <- "AGM20021"
   }
   
@@ -517,7 +517,7 @@ n_males <- n_males %>%
 
 # n unique observed and genotyped males 
 # For observed only males (ie not tissue sampled), different IDs are considered to be different individuals
-nrow(n_males %>% distinct(uniqueID)) # 1954
+nrow(n_males %>% distinct(uniqueID)) # 1955
 
 n_obs_males <- n_males %>%
   group_by(Season) %>% 
