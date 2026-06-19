@@ -11,7 +11,7 @@ The Zenodo repository contains the following input files:
 - `male_pups_pheno_data.xlsx` — fitness data for male pups
 - `sMLH_msats_male_pups.xlsx` — standardised multilocus heterozygosity (sMLH) values calculated from the microsatellite data
 
-Furthmore, we used SAM index data for our analyses. The SAM index data were downloaded from http://www.nerc-bas.ac.uk/ icd/gjma/sam.html on the 3rd of April 2024, and are located in the `Data/raw/` folder.
+Furthmore, we used SAM index data for our analyses. The SAM index data were downloaded from http://www.nerc-bas.ac.uk/icd/gjma/sam.html on the 3rd of April 2024, and are located in the `Data/raw/` folder.
 
 ## Requirements
 
