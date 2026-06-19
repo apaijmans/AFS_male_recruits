@@ -38,7 +38,7 @@ tot_males <- full_join(n_males, obs_males, by = "SamplingYear") %>%
 
 tot_males[which(is.na(tot_males$GenMales)), "GenMales"] <- 0 # no males were tissue sampled in 1998/1999
 
-colSums(tot_males)["GenMales"]/colSums(tot_males)["AllMales"] # 77% of males are tissue sampled across all years
+colSums(tot_males)["GenMales"]/colSums(tot_males)["AllMales"] # 75% of males are tissue sampled across all years
 
 
 #~~ Percentage decline
@@ -65,7 +65,7 @@ n.males <- ggplot(tot_males %>% pivot_longer(c(AllMales, GenMales), names_to = "
   #geom_smooth(method = "lm", colour = "black", fill = "darkgrey", alpha = 0.8) +
   geom_point(aes(col = sampled)) +
   geom_line(aes(col = sampled)) +
-  scale_color_manual(labels = c("N sampled", "N sampled + observed"), values = c("darkgrey", "black")) +
+  scale_color_manual(labels = c("N sampled + observed", "N sampled"), values = c("darkgrey", "black")) +
   labs(x = "Year", y = "Male count", color = "")
 #ggpubr::stat_cor(method = "pearson",  show.legend = FALSE, label.y.npc = "top")
 
@@ -126,4 +126,4 @@ males %>%
 # # A tibble: 1 × 4
 # av    md    mn    mx
 # <dbl> <dbl> <dbl> <dbl>
-#   1  2.01     2     1     9
+#   1  2.07     2     1     9

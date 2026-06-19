@@ -76,6 +76,7 @@ pups39 %>%
 # <dbl> <int>
 # 1      0  3757
 # 2      1   106
+3757+106 # in total 3863 pups genotyped at 39 loci
 
 
 #~~ Filter for year
@@ -86,9 +87,9 @@ pups39 %>%
 # 2301 pups < 2013
 # 1562 pups >= 2013
 
-pups11 <- pups39 %>% filter(PupBirthyear < 2013)
+pups12 <- pups39 %>% filter(PupBirthyear < 2013)
 
-pups11 %>% 
+pups12 %>% 
   group_by(Status) %>% 
   tally()
 # Status     n
@@ -109,12 +110,12 @@ gen_males %>%
 # 1      0  2273
 # 2      1   106
 
-(106/2273) *100
-# Recruitment rate: 4.7% (4.66)
+(106/(106+2273)) *100
+# Recruitment rate: 4.5% (4.455654)
 
 
 #~~ Check for collinearity
-melted_cors <- reshape::melt(pups11 %>% 
+melted_cors <- reshape::melt(pups12 %>% 
                                select(sMLH_39msat, PupWeight, PupBirthyear, FirstRecaptureYear, YearsAshore, SAMBirthyear) %>% 
                                mutate_all(as.numeric) %>% 
                                cor(use = 'pair'))
@@ -129,11 +130,11 @@ ggplot(data = melted_cors, aes(x=X1, y=X2, fill=value)) +
 
 
 #~~ Cleaned df
-pups11.complete <- pups11 %>%
+pups12.complete <- pups12 %>%
   select(Status, sMLH_39msat, PupBirthyear, PupWeight, SAMBirthyear, uniqueID, status) %>%
   drop_na
 
-pups11.complete %>% group_by(Status) %>% tally()
+pups12.complete %>% group_by(Status) %>% tally()
 # Status     n
 # 1      0  1680
 # 2      1    87
@@ -148,7 +149,7 @@ pups11.complete %>% group_by(Status) %>% tally()
 #~~ Model testing temporal effect male recruitment success
 m1 <- glm(Status ~ scale(PupBirthyear),
           family=binomial, 
-          data = as.data.frame(pups11.complete))
+          data = as.data.frame(pups12.complete))
 
 
 #~~ Model assumptions
@@ -205,7 +206,7 @@ system(cmd)
 # Use ggeffects to calculate predicted values as well as confidence intervals
 
 # Calculate total number and percentage of recruits for inclusion in figure
-n_recs <- pups11.complete %>% 
+n_recs <- pups12.complete %>% 
   select(uniqueID, PupBirthyear, status) %>%
   distinct(uniqueID, .keep_all = T) %>%
   group_by(PupBirthyear, status) %>%
@@ -218,7 +219,7 @@ predict_response(temp_model, "PupBirthyear")
 
 gge_year <- as.data.frame(ggpredict(temp_model, "PupBirthyear"))
 
-pred_year <- left_join(pups11.complete, gge_year, by = c("PupBirthyear" = "x"))
+pred_year <- left_join(pups12.complete, gge_year, by = c("PupBirthyear" = "x"))
 
 pred_year %>%
   distinct(PupBirthyear, predicted) %>%
@@ -258,7 +259,7 @@ exp(temp_model$coefficient)
 
 # We can also subtract 1 from the odds value to obtain a percentage:
 ( (1/exp(temp_model$coefficient["scale(PupBirthyear)"])) - 1 ) * 100
-# So there is a 59% decrease in probability of recruitment with a one-unit increase in birth year (58.98618) 
+# So there is a 59% decrease in probability of recruitment with a one-unit increase in birth year (59.41739) 
 
 
 
@@ -271,7 +272,7 @@ exp(temp_model$coefficient)
 m1 <- glm(Status ~ scale(sMLH_39msat) * scale(SAMBirthyear) # Test whether under bad SAM, heterozygous individuals are more likely to recruit
           + scale(PupWeight) * scale(SAMBirthyear), # Test whether pups that are born heavier in a bad year are more likely to recruit
           family=binomial, 
-          data = as.data.frame(pups11.complete))
+          data = as.data.frame(pups12.complete))
 
 #~~ Model assumptions
 testDispersion(m1)
@@ -376,7 +377,7 @@ system(cmd)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 # Calculate total number and percentage of recruits for inclusion in figure
-# n_recs <- pups11.complete %>% 
+# n_recs <- pups12.complete %>% 
 #   select(uniqueID, PupBirthyear, status) %>%
 #   distinct(uniqueID, .keep_all = T) %>%
 #   group_by(PupBirthyear, status) %>%
@@ -390,13 +391,13 @@ system(cmd)
 gge_SAM <- as.data.frame(ggpredict(final_model, "SAMBirthyear"))
 
 # sprintf("%.16f", gge_SAM$x)
-# sprintf("%.16f", pups11.complete$dtSAMBirthyear)
+# sprintf("%.16f", pups12.complete$dtSAMBirthyear)
 # For some weird reason, two values for dtSAM are slightly different compared to the dataframe...
 # Rounding to 3 decimals to make sure they merge properly
 
 gge_SAM <- gge_SAM %>% mutate(x = round(x, digits = 3))
 
-pred_SAM <- left_join(pups11.complete %>% mutate(SAMBirthyear = round(SAMBirthyear, digits = 3)), gge_SAM, by = c("SAMBirthyear" = "x"))
+pred_SAM <- left_join(pups12.complete %>% mutate(SAMBirthyear = round(SAMBirthyear, digits = 3)), gge_SAM, by = c("SAMBirthyear" = "x"))
 
 pred_SAM %>%
   distinct(SAMBirthyear, predicted) %>%
@@ -549,7 +550,7 @@ saveRDS(bar_rec_all_years_unfiltered, here("Figs", "barplot_males_per_year_39loc
 #(add dummy column to allow saving and editing figure colors post hoc in "4_figs.R")
 
 # Here we can include all recruits, regardless of missing fitness data such as birth mass
-p.age <- ggplot(pups11 %>% filter(status == "Recruited") %>% mutate(dummy = "1"), 
+p.age <- ggplot(pups12 %>% filter(status == "Recruited") %>% mutate(dummy = "1"), 
                 aes(x = FirstRecaptureAge, fill = dummy, color = dummy)) +
   geom_histogram(binwidth = 1) +
   xlab("Age at first recapture") +
@@ -563,7 +564,7 @@ saveRDS(p.age, here("Figs", "age_first_recapture.rds"))
 
 #~~ Recruitment vs birth mass (fig 2f)
 # In this figure the filtered data was used (same data as for model)
-beeswarm_mass <- ggplot(pups11.complete, aes(x=status, y=PupWeight)) +
+beeswarm_mass <- ggplot(pups12.complete, aes(x=status, y=PupWeight)) +
   ggbeeswarm::geom_quasirandom(size = 2, aes(color = status, fill = status), shape=21) +
   geom_boxplot(alpha = 0.4, outlier.shape = NA, fill = "darkgrey") 
 
@@ -574,7 +575,7 @@ saveRDS(beeswarm_mass, here("Figs", "boxplot_status_mass_beeswarm.rds"))
 
 #~~ Recruitment vs sMLH (fig 2g)
 # In this figure the filtered data was used (same data as for model)
-beeswarm_sMLH <- ggplot(pups11.complete, aes(x=status, y=sMLH_39msat)) +
+beeswarm_sMLH <- ggplot(pups12.complete, aes(x=status, y=sMLH_39msat)) +
   ggbeeswarm::geom_quasirandom(size = 2, aes(color = status, fill = status), shape=21) +
   geom_boxplot(alpha = 0.4, outlier.shape = NA, fill = "darkgrey") 
 

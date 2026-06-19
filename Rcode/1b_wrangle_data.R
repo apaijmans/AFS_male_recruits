@@ -42,15 +42,33 @@ AFS <- read_excel(here("Data", "raw", "all_msat_genotypes_uniqueID.xlsx"),
   guess_max = 15000) %>%
   select(uniqueID, SampleID, dummyID, Pup, Male, Best_genotype, Matches)
 
-nrow(AFS %>% filter(Pup == 1) %>% distinct(uniqueID)) # 8580
-nrow(AFS %>% filter(Male == 1)%>% distinct(dummyID)) # 2696
+nrow(AFS %>% filter(Pup == 1) %>% distinct(uniqueID)) # 8580 unique pups
+nrow(AFS %>% filter(Pup == 1) %>% distinct(dummyID)) # 8730 pup samples
+nrow(AFS %>% filter(Male == 1)%>% distinct(dummyID)) # 2696 male samples
 
-#~~ Filter all males and pups that were resampled as adult males
+#~~ Filter all males and pups that were re-sampled as adult males
 # This includes all adult males and male pups but only if they were recaptured as an adult male
 males <- AFS %>%
   filter(Male == 1 | 
            (Pup == 1 & grepl(".*AGM.*", Matches)))
 # 2920
+
+males %>%
+  group_by(uniqueID) %>%
+  mutate(Group = cur_group_id()) %>%
+  ungroup() %>%
+  arrange(Group) %>% summarise(max(Group))
+# 1217 pup-male and male-male recaptures, and adult males sampled only once
+
+
+# In 2001/2002 extra sampling effort was done to also sample peripheral males
+# To keep the data comparible across years, I would remove those from the total counts
+males %>% filter(!grepl("^AGM", dummyID) & !grepl("^AGP", dummyID)) %>% nrow()
+
+males <- AFS %>% 
+  filter(grepl("^AGM.*", SampleID) | 
+           (Pup == 1 & grepl(".*AGM.*", Matches)))
+# 2828
 
 str(males)
 
@@ -61,7 +79,7 @@ males <- males %>%
   ungroup() %>%
   arrange(Group)
 
-max(males$Group) # 1217 pup-male and male-male recaptures, and adult males sampled only once
+max(males$Group) # 1143 pup-male and male-male recaptures, and adult males sampled only once when excluding peripheral males
 
 # Check which groups have either none or multiple samples identified as best_genotype (ie sum best_genotype is either > 1 or < 1)
 males %>% group_by(Group) %>% summarise(Best_gen = sum(as.numeric(Best_genotype))) %>% filter(Best_gen != 1)
@@ -79,10 +97,10 @@ males <- males %>%
   group_by(Group) %>%
   fill(PupBirthyear, .direction = "downup") %>%
   ungroup() %>%
-  mutate(SamplingAge = SamplingYear - PupBirthyear) %>%
-  mutate(SamplingYear = ifelse(dummyID == "M1", 2007, SamplingYear)) %>% # M1 was sampled in 2006/07 (and most likely AGM06089)
-  mutate(SamplingYear = ifelse(dummyID == "L-R-EAR", 2002, SamplingYear)) %>% # L-R-EAR was sampled in 2001/02, found in ledger
-  mutate(SamplingYear = ifelse(dummyID == "O-3SP-RUMP", 2002, SamplingYear)) # O-3SP-RUMP was probably sampled in 2001/02, done on the same plate as all other experimental males from 2001
+  mutate(SamplingAge = SamplingYear - PupBirthyear) #%>%
+  #mutate(SamplingYear = ifelse(dummyID == "M1", 2007, SamplingYear)) %>% # M1 was sampled in 2006/07 (and most likely AGM06089)
+  #mutate(SamplingYear = ifelse(dummyID == "L-R-EAR", 2002, SamplingYear)) %>% # L-R-EAR was sampled in 2001/02, found in ledger
+  #mutate(SamplingYear = ifelse(dummyID == "O-3SP-RUMP", 2002, SamplingYear)) # O-3SP-RUMP was probably sampled in 2001/02, done on the same plate as all other experimental males from 2001
 
 males %>% filter(is.na(SamplingYear)) # none without a sampling year
 
@@ -110,7 +128,7 @@ within_year <- males %>%
   )
 
 round(sum(within_year$recaptured_within)/sum(within_year$total_captures)* 100, 1)
-# summing up over all years 22.5 % of individuals was recaptured within the same year
+# summing up over all years 22.3 % of individuals was recaptured within the same year
 
 across_year <- males %>% 
   filter(!grepl(".*AGP.*", SampleID)) %>% # remove pups
@@ -126,7 +144,7 @@ across_year <- males %>%
   )
 
 across_year
-# 75% was recaptured across years
+# 77% was recaptured across years
 
 
 
@@ -137,7 +155,7 @@ across_year
 
 #~~ Calculate total number of gen sampled unique males per year
 n_males <- males %>% 
-  filter(!grepl(".*AGP.*", SampleID)) %>% # remove pups
+  filter(grepl(".*AGM.*", SampleID)) %>% # keep only AGMs
   distinct(uniqueID, SamplingYear) %>% 
   group_by(SamplingYear) %>% 
   tally() %>%
@@ -258,13 +276,13 @@ skipped_years %>% group_by(Group, Diff) %>% tally() %>% filter(!is.na(Diff) & Di
 skipped_years %>% distinct(Group, Diff) %>% group_by(Diff) %>% tally()
 # Diff     n
 # <dbl> <int>
-# 1     0   251 # These are individuals that were sampled more than once in the same year
-# 2     1   567 # These are NOT skipped years, but simply returns the next year (eg a male seen in 1994 and then in 1995 will have a difference of 1)
-# 3     2    76 # So this would be males that skipped 1 year. Eg seen in 1994 and 1996, but not 1995
+# 1     0   243 # These are individuals that were sampled more than once in the same year
+# 2     1   565 # These are NOT skipped years, but simply returns the next year (eg a male seen in 1994 and then in 1995 will have a difference of 1)
+# 3     2    78 # So this would be males that skipped 1 year. Eg seen in 1994 and 1996, but not 1995
 # 4     3    16 # Skipped 2 years
 # 5     4    11 # Skipped 3 years
 # 6     5     1 # Skipped 4 years
-# 7    NA  1217 # these are both the first row within a group but also any groups that consist of only 1 sample (ie not recaptured individuals)
+# 7    NA  1143 # these are both the first row within a group but also any groups that consist of only 1 sample (ie not recaptured individuals)
 
 # Who are the skippers?
 skippers <- males %>%
@@ -276,9 +294,9 @@ skippers <- males %>%
   ungroup()
 
 nrow(skippers %>% distinct(Group))
-# 103 males that skipped at least 1 year of tenure between first appearance and last appearance
+# 105 males that skipped at least 1 year of tenure between first appearance and last appearance
 nrow(skippers %>% distinct(Group))/nrow(males %>% distinct(Group)) *100
-# ie 8.5% of males skipped at least one year
+# ie 9.2% of males skipped at least one year
 
 
 # 103 or 104 individuals skipping a year?

@@ -11,8 +11,8 @@
 # The saved df "n_observed_males.xlsx" is further used in 
 # scripts "2_explore_data_n_males.R" and "3_stats_n_males".
 #
-# NB Start script at 335 if you want to skip loading the raw data!!!
-# or 458 if you want to skip cleaning the data
+# NB Start script at 340 if you want to skip loading the raw data!!!
+# or 455 if you want to skip cleaning the data
 #
 # -----------------------------------------------------------
 
@@ -98,7 +98,7 @@ raw_pos94[[4]] <- raw_pos94[[4]][-c(1,2),]
 raw_pos94[[5]] <- raw_pos94[[5]][-c(1,2),]
 raw_pos94[[6]] <- raw_pos94[[6]][-c(1:3),]
 raw_pos94[[7]] <- raw_pos94[[7]][-1,]
-raw_pos94[[8]] <- raw_pos94[[8]][-c(1:8),-c(69:91)]
+raw_pos94[[8]] <- raw_pos94[[8]][-c(1:8),-c(70:91)]
 raw_pos94[[9]] <- raw_pos94[[9]][-c(1,2),]
 raw_pos94[[10]] <- raw_pos94[[10]][-1,]
 raw_pos94[[11]] <- raw_pos94[[11]][-1,]
@@ -243,7 +243,6 @@ files <- files[!grepl(paste0("^", here("Data", "raw", "MaleLocations"), "/Males0
 files <- files[!grepl(paste0("^", here("Data", "raw", "MaleLocations"), "/Males10"), files)]
 
 pos_long_total07 <- NULL
-counter = 0
 
 for (i in files){
   
@@ -271,7 +270,7 @@ for (i in files){
   first_col <- grep("^[[:digit:]]", colnames(raw_pos))[1]
   last_c <- tail(grep("^[[:digit:]]", colnames(raw_pos)), n = 1)
   
-  counter = counter + 1
+  dummyYear <- str_extract_all(i, "\\d{2}")[[1]][2]
   
   # Fix mistake in 2017: AGM17015 twice (once as AGM17009 + AGM17015), the second one must be 16
   # AGM17009 and AGM17015 are indeed a genetic match and also a genetic match with AGM18011 which has the same PIT tag ID
@@ -287,9 +286,14 @@ for (i in files){
   }
   
   pos_long <- raw_pos %>%
-    mutate(SampleID = ifelse(is.na(SampleID) | SampleID == "-", paste0("dummyID", counter, "_", row_number()), SampleID)) %>%
+    mutate(SampleID = ifelse(is.na(SampleID) | SampleID == "-", paste0("dummyID", dummyYear, "_", row_number()), SampleID)) %>%
     select(SampleID, all_of(first_col):all_of(last_c)) %>%
     pivot_longer(!SampleID, names_to = "Date", values_to = "Location", values_transform = list(Location = as.character)) 
+  
+  # Fix mistake in 2009, 2013, 2019: Dates are given wrong
+  if(grepl("Males09_10.xls", i) | grepl("Males_13_14.xlsx", i) | grepl("Males_19_20.xlsx", i)) {
+    pos_long <- pos_long %>% mutate(Date = as.character(as.numeric(Date) + 365))
+  }
   
   pos_long_total07 <- rbind(pos_long_total07, pos_long)
   
@@ -385,7 +389,6 @@ pos_long_total2 <- pos_long_total %>%
   mutate(SamplingYear = paste(pre, SamplingYear, sep = "")) %>%
   mutate(SamplingYear = substr(SamplingYear, 1, 4)) %>%
   mutate(SamplingYear = as.numeric(SamplingYear)) %>%
-  mutate(SamplingYear = ifelse(grepl("^dummyID", SampleID), Season, SamplingYear)) %>% 
   # Check
   mutate(CheckYear = ifelse(SamplingYear != Season, "WRONG", NA)) %>%
   # pos_long_total2 %>% filter(CheckYear=="WRONG") %>% group_by(Season, SamplingYear) %>% tally()
@@ -396,19 +399,12 @@ pos_long_total2 <- pos_long_total %>%
   mutate(SeasonNew = ifelse(Season == 2001 & SamplingYear == 2002, 2002, SeasonNew)) %>% # some dates for 1997 were wrong in the raw data file
   mutate(SeasonNew = ifelse(Season == 2006 & SamplingYear == 2005, 2005, SeasonNew)) %>% # some dates for 1997 were wrong in the raw data file
   mutate(SeasonNew = ifelse(Season == 2005 & SamplingYear == 2006, 2006, SeasonNew)) %>% # some dates for 2006 were wrong in the raw data file
-  mutate(SeasonNew = ifelse(Season == 2008 & SamplingYear == 2009, 2009, SeasonNew)) %>% # dates for 2009 were all wrong in the raw data file
-  mutate(SeasonNew = ifelse(Season == 2012 & SamplingYear == 2013, 2013, SeasonNew)) %>% # dates for 2013 were all wrong in the raw data file
-  mutate(SeasonNew = ifelse(Season == 2018 & SamplingYear == 2019, 2019, SeasonNew)) %>% # dates for 2019 were all wrong in the raw data file
-  #mutate(FinalDate = as.Date(ifelse(grepl("^dummyID", SampleID), DateClean, NA), origin = "1970-01-01")) %>%
   mutate(FinalDate = as.Date(ifelse(Season == 1995 & SamplingYear == 1996, DateClean %m+% years(1), DateClean), origin = "1970-01-01")) %>%
   mutate(FinalDate = as.Date(ifelse(Season == 1995 & SamplingYear == 1997, DateClean %m+% years(2), FinalDate), origin = "1970-01-01")) %>%
   mutate(FinalDate = as.Date(ifelse(Season == 1996 & SamplingYear == 1997, DateClean %m+% years(1), FinalDate), origin = "1970-01-01")) %>%
   mutate(FinalDate = as.Date(ifelse(Season == 2001 & SamplingYear == 2002, DateClean %m+% years(1), FinalDate), origin = "1970-01-01")) %>%
   mutate(FinalDate = as.Date(ifelse(Season == 2006 & SamplingYear == 2005, DateClean %m-% years(1), FinalDate), origin = "1970-01-01")) %>%
   mutate(FinalDate = as.Date(ifelse(Season == 2005 & SamplingYear == 2006, DateClean %m+% years(1), FinalDate), origin = "1970-01-01")) %>%
-  mutate(FinalDate = as.Date(ifelse(Season == 2008 & SamplingYear == 2009, DateClean %m+% years(1), FinalDate), origin = "1970-01-01")) %>%
-  mutate(FinalDate = as.Date(ifelse(Season == 2012 & SamplingYear == 2013, DateClean %m+% years(1), FinalDate), origin = "1970-01-01")) %>%
-  mutate(FinalDate = as.Date(ifelse(Season == 2018 & SamplingYear == 2019, DateClean %m+% years(1), FinalDate), origin = "1970-01-01")) %>%
   # # Check
   mutate(CheckYear2 = ifelse(SamplingYear != SeasonNew, "WRONG", NA)) %>%
   # Checks
@@ -461,6 +457,10 @@ saveRDS(pos_long_total4, file = here("data", "Processed", "clean_pos_data_obs.Rd
 
 #~~ Load data
 pos_long_total4 <- readRDS(file = here("data", "Processed", "clean_pos_data_obs.Rds"))
+
+# In 2001/2002 extra sampling effort was done to also sample peripheral males
+pos_long_total4 %>% distinct(SampleID, Season) %>% filter(!grepl("^AGM", SampleID)) #%>% View()
+# Are not present here
 
 # Some individuals were sampled twice (or more) within one season
 # Here I remove those duplicates, while keeping all observed (non-sampled) IDs. 
@@ -517,7 +517,7 @@ n_males <- n_males %>%
 
 # n unique observed and genotyped males 
 # For observed only males (ie not tissue sampled), different IDs are considered to be different individuals
-nrow(n_males %>% distinct(uniqueID)) # 1955
+nrow(n_males %>% distinct(uniqueID)) # 1957
 
 n_obs_males <- n_males %>%
   group_by(Season) %>% 

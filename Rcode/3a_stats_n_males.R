@@ -65,7 +65,7 @@ mYear <- glm.nb(TotalMales ~ scale(SamplingYear),
 testDispersion(mYear)
 plotQQunif(mYear)
 plotResiduals(mYear) 
-# Looks OK
+# Looks OK, last plot could be better
 
 summary(mYear)
 
@@ -75,10 +75,10 @@ gam.year <- gam(TotalMales ~ s(scale(SamplingYear)),
                 family = nb(),
                 data = complete_males)
 
-gam.year$family$getTheta(TRUE)
+gam_theta <- gam.year$family$getTheta(TRUE)
 
 gam.year <- gam(TotalMales ~ s(scale(SamplingYear)), 
-                family = negbin(18),
+                family = negbin(gam_theta),
                 data = complete_males)
 
 gam.check(gam.year)
@@ -208,7 +208,7 @@ gam.sam <- gam(TotalMales ~ s(scale(SAMSamplingYear)),
                family = nb(),
                data = complete_males)
 
-gam.sam$family$getTheta(TRUE)
+gam_theta <- gam.sam$family$getTheta(TRUE)
 
 gam.sam <- gam(TotalMales ~ s(scale(SAMSamplingYear)), 
                family = negbin(6),
