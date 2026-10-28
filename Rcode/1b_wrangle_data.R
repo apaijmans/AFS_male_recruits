@@ -113,7 +113,7 @@ males %>%
   summarise(mean_recap = mean(n, na.rm = T),
             min_recap = min(n, na.rm = T), 
             max_recap = max(n, na.rm = T))
-# mean: 2, min: 1, max: 14
+# mean: 2.35, min: 1, max: 14
 
 # How many times was each male recaptured within seasons and across seasons?
 within_year <- males %>% 
@@ -540,9 +540,12 @@ sam_index <- read.table(here("data", "raw", "newsam.1957.2007.seas.txt"), header
   mutate(annual_mean = as.numeric(ANN)) %>%
   select(year, annual_mean)
 
+# Select only years from specific time series
+sam_period <- sam_index %>% filter(year > 1994 & year < 2022)
+
 #~~ Make figure showing SAM index over time (fig 1d)
-sam_plot <- ggpubr::ggscatter(sam_index, x = "year", y = "annual_mean",
-                              add = "reg.line",
+sam_plot <- ggpubr::ggscatter(sam_period, x = "year", y = "annual_mean",
+                              #add = "reg.line",
                               conf.int = TRUE,
                               #cor.coef = TRUE,
                               cor.method = "pearson",
@@ -553,10 +556,10 @@ sam_plot <- ggpubr::ggscatter(sam_index, x = "year", y = "annual_mean",
 
 sam_plot
 
-saveRDS(sam_plot, here("Figs", "SAM_year_reg_line.rds"))
+saveRDS(sam_plot, here("Figs", "SAM_year_reg_line_1995-2021.rds"))
 
 # Simple LM
-summary(lm(sam_index$annual_mean ~ sam_index$year))
+summary(lm(sam_period$annual_mean ~ sam_period$year))
 
 # Year and SAM are correlated. Create detrended SAM variable (= residuals from the lm on SAM)
 detrend <- function(x) resid(lm(x ~ seq(x)))
