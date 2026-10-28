@@ -41,7 +41,7 @@ tot_males[which(is.na(tot_males$GenMales)), "GenMales"] <- 0 # no males were tis
 colSums(tot_males)["GenMales"]/colSums(tot_males)["AllMales"] # 75% of males are tissue sampled across all years
 
 
-#~~ Percentage decline
+#~~ Percentage decline based on observational data
 (tot_males[which(tot_males$SamplingYear == 1995), "AllMales"]-tot_males[which(tot_males$SamplingYear == 2021), "AllMales"]) / tot_males[which(tot_males$SamplingYear == 1995), "AllMales"] * 100
 # decline is 61% in 27 years (1995 until 2021)
 
