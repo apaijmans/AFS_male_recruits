@@ -3,14 +3,14 @@
 #
 # Script Name: 1b_wrangle_data.R
 #
-# Purpose: This script contains thee main parts.
+# Purpose: This script contains four main parts.
 #
 # In the first part, the male genetic recapture data
 # is used to calculate the number of observed males per year
 # ("total_n_males.xlsx", further used in script "2_explore_data_n_males.R").
 #
 # In the second part, the male genetic recapture data is used
-# to calculate variables such as first/last year of recapture 
+# to calculate variables such as first/last year of recapture, 
 # age at recapture, skippers etc. This df is saved as
 # "all_males_wrangled.xlsx" and further used in script 
 # "2_explore_data_n_males.R".
@@ -19,9 +19,21 @@
 # pups that were recaptured as an adult male), adds all other male pups (ie
 # male pups that were not later recaptured as an adult)
 # and adds fitness data and sMLH. Finally, the SAM values are added 
-# to the datafame and the SAM figure (fig 1d) is created and saved.
-# This df is then saved as: "males_sMLH_fitness.xlsx# and further
-# used in script "3b_stats_interaction_SAM.R".
+# to the dataframe and the SAM figure (fig 1d) is created and saved.
+# Before saving, the adult male recaptures are removed, so that each
+# male pup is represented by its pup sample only. This df is then 
+# saved as: "males_sMLH_fitness.xlsx" and further used in 
+# script "3b_stats_interaction_SAM.R".
+# 
+# In the fourth part, a dataframe for the mark-recapture analysis
+# is created from the same data (before removing the adult males). 
+# It then filters to includes only male pups genotyped at 39 loci. 
+# Non-recruited pups get one row each, and recruited
+# pups get one row per sampling event (pup and adult recaptures),
+# together with recapture variables, sMLH and (detrended) SAM values
+# for birth and sampling year. This df is saved as
+# "male_pups_sMLH_fitness.csv" and further used in script
+# "AFSMaleRecruitment.Rmd".
 #
 # -----------------------------------------------------------
 
@@ -331,6 +343,7 @@ male_recaptures %>% group_by(Group) %>% summarise(Best_gen = sum(as.numeric(Best
 # Keep only relevant columns
 male_recaptures <- male_recaptures %>% 
   distinct(Group, 
+           uniqueID,
            SampleID = dummyID, 
            SamplingYear, 
            PupBirthyear, 
@@ -444,8 +457,18 @@ pups <- full_join(male_pups, sMLH_msats, by = c("PupTissueID" = "SampleID", "uni
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 #~~ Join with recaptures
-all_males <- full_join(pups, male_recaptures %>% rename(PupTissueID = SampleID), by = "PupTissueID")
+all_males <- full_join(pups, male_recaptures %>% rename(PupTissueID = SampleID), by = "PupTissueID") %>%
+  mutate(uniqueID = coalesce(uniqueID.x, uniqueID.y)) %>%
+  select(-c(uniqueID.x, uniqueID.y))
 
+# Check uniqueID
+all_males %>% 
+  filter(!is.na(Group)) %>%
+  group_by(Group) %>%
+  summarise(n_ids = n_distinct(uniqueID)) %>%
+  filter(n_ids > 1) 
+# None, so uniqueIDs are consistent across groups
+  
 # Check birthyear
 nrow(all_males %>% 
        mutate(check = ifelse(!is.na(PupBirthyear.x) & !is.na(PupBirthyear.y) & PupBirthyear.x != PupBirthyear.y, "WRONG", NA)) %>% 
@@ -454,6 +477,7 @@ nrow(all_males %>%
 
 all_males <- all_males %>%
   mutate(PupBirthyear = coalesce(PupBirthyear.x, PupBirthyear.y)) %>%
+  mutate(SamplingAge = if_else(is.na(SamplingAge) & grepl("^AGP", PupTissueID), 0, SamplingAge)) %>%
   select(PupTissueID, uniqueID, status, PupBirthyear, PupSex, PupWeight, CoordPupping, 
          sMLH_9msat, sMLH_39msat, gaps_39msat, Group, SamplingYear, SamplingAge, 
          FirstRecaptureAge, LastRecaptureAge, FirstRecaptureYear, LastRecaptureYear,YearsAshore)
@@ -501,6 +525,23 @@ all_males %>%
 
 # Keep only samples genotyped for 9 and/or 39 loci
 # max 21-22% missing data (ie max 2 missing loci out of 9, max 8 missing loci out of 39)
+
+all_males <- all_males %>%
+  group_by(uniqueID) %>%
+  fill(sMLH_9msat, .direction = "downup") %>%
+  fill(sMLH_39msat, .direction = "downup") %>%
+  fill(gaps_39msat, .direction = "downup") %>%
+  ungroup()
+
+all_males %>% filter(!is.na(uniqueID)) %>% distinct(uniqueID, .keep_all = T) %>% group_by(PupSex) %>% tally()
+
+all_males %>%
+  filter(!is.na(uniqueID)) %>%
+  filter(!is.na(sMLH_9msat) | !is.na(sMLH_39msat)) %>%
+  distinct(uniqueID, .keep_all = T) %>%
+  group_by(PupSex) %>%
+  tally()
+# 3946
 
 gen_males <- all_males %>%
   filter(!is.na(sMLH_9msat) | !is.na(sMLH_39msat))
@@ -595,14 +636,16 @@ gen_males <- gen_males %>%
 nrow(gen_males %>% filter(!is.na(uniqueID)) %>% distinct(uniqueID))
 #3946 ( = 3840+106)
 
-
-#~~ Save dataframe
 # Breeding seasons are referred to by the year in which they ended
-gen_males2 <- gen_males %>%
+gen_males <- gen_males %>%
   mutate(PupBirthyear = PupBirthyear + 1) %>%
   mutate(SamplingYear = SamplingYear + 1) %>% 
   mutate(FirstRecaptureYear = FirstRecaptureYear + 1) %>%
   mutate(LastRecaptureYear = LastRecaptureYear + 1)
+
+#~~ Save dataframe
+# Remove adults males from this df
+gen_males2 <- gen_males %>% filter(SamplingAge==0)
 
 gen_males2 %>% filter(!is.na(uniqueID)) %>% distinct(uniqueID, .keep_all = T) %>% group_by(status) %>% tally()
 
@@ -616,4 +659,57 @@ gen_males2 %>%
 # 1 NonRecruited  3840
 # 2 Recruited      106
 
-openxlsx::write.xlsx(gen_males2, here("Data", "Processed", "males_sMLH_fitness.xlsx"))         
+openxlsx::write.xlsx(gen_males2, here("Data", "Processed", "males_sMLH_fitness.xlsx"))       
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#  Save df for mark-recapture analysis  ####
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+gen_males %>%
+  mutate(status = ifelse(is.na(status) | status =="BeachDead", "NonRecruited", status)) %>%
+  distinct(uniqueID, .keep_all = T) %>%
+  group_by(status) %>%
+  tally()
+
+gen_males <- gen_males %>%
+  mutate(status = ifelse(is.na(status) | status =="BeachDead", "NonRecruited", status)) %>%
+  mutate(Status = ifelse(status =="Recruited", 1, 0)) %>%
+  select(-dtSAMmismatch) # drop unused df
+
+#~~ Keep only pups genotyped at 39 loci
+pups39 <- rbind(gen_males %>%
+                  filter(Status==0) %>%
+                  distinct(uniqueID, .keep_all = T) %>%
+                  filter(!is.na(sMLH_39msat)), 
+                gen_males %>%
+                  filter(Status==1) %>%
+                  filter(!is.na(sMLH_39msat)))
+
+# Mean # of loci
+pups39 %>% distinct(uniqueID, gaps_39msat) %>% mutate(n_loci = 39 - gaps_39msat) %>%
+  summarise(mean_loci = mean(n_loci))
+
+pups39 %>%
+  group_by(Status) %>%
+  tally()
+
+pups39_new <- pups39 %>% 
+  mutate(SamplingYear = if_else(is.na(SamplingYear) & grepl("^AGP", PupTissueID), PupBirthyear, SamplingYear)) %>%
+  select(Group,	PupTissueID, uniqueID,	status,	PupBirthyear,	PupSex,	PupWeight,	sMLH_39msat,	
+         SamplingYear,	SamplingAge,	FirstRecaptureAge,	LastRecaptureAge,	FirstRecaptureYear,	LastRecaptureYear,	
+         YearsAshore,	SAMBirthyear,	dtSAMBirthyear,	SAMSamplingYear,	dtSAMSamplingYear)
+
+
+pups39_new %>% 
+  distinct(uniqueID, .keep_all = T) %>%
+  group_by(status) %>% 
+  tally()
+# status           n
+# <chr>        <int>
+# 1 NonRecruited  3757
+# 2 Recruited      106
+3757+106 # in total 3863 pups genotyped at 39 loci
+
+# Save file
+write.csv(pups39_new, here("Data", "Processed", "male_pups_sMLH_fitness.csv"), row.names = F)
