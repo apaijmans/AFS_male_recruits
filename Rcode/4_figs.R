@@ -22,6 +22,8 @@ coltan <- "#B0925B"
 coldarkb <- "#9bd5ff"
 coldarkt <- "#907645"
 
+
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #  Figure 1: Male counts  ####
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -60,9 +62,9 @@ p.males_new
 
 
 #~~ Panel d: SAM vs year
-p.sam_year <- readRDS(here("Figs", "SAM_year_reg_line.rds"))
+p.sam_year <- readRDS(here("Figs", "SAM_year_reg_line_1995-2021.rds"))
 
-p.sam_year_new <- p.sam_year + theme_pubr()
+p.sam_year_new <- p.sam_year + scale_x_continuous("Year", breaks = c(1995, 2005, 2015)) + theme_pubr()
 
 p.sam_year_new
 
@@ -106,29 +108,14 @@ cowplot::save_plot(here("Figs", "fig1_n_male_counts.jpg"), fig1, base_width = 10
 #~~ Fig 2a: Barplot recruitment per birth year for all samples genotyped at 39 loci
 bar_rec_all <- readRDS(here("Figs", "barplot_males_per_year_39loci_all_years_unfiltered.rds"))
 
+#~~ Fig 2b: Apparent survival split by SAM (negative/neutral/high)
+p_S <- readRDS(here("Figs", "p_S_model.rds"))
 
-#~~ Fig 2b: Histogram age (all 106 recruited males)
+#~~ Fig 2c: Histogram age (all 106 recruited males)
 p.age <- readRDS(here("Figs", "age_first_recapture.rds"))
 
-
-#~~ Fig 2c: Temporal model prediction plot (based on the filtered dataset)
-p.BY <- readRDS(here("Figs", "Mod_pred_status_birthyear_temporal_model.rds"))
-
-
-#~~ Fig 2d: Full model forest plot (based on the filtered dataset)
-p.mod <- readRDS(here("Figs", "Forest_plot_recruitment_39loci_SAM.rds"))
-
-
-#~~ Fig 2e: Full model prediction plot SAM (based on the filtered dataset)
-p.SAM <- readRDS(here("Figs", "Mod_pred_status_SAM.rds"))
-
-
-#~~ Fig 2f: Swarmplot recruitment birth mass (based on the filtered dataset)
-beeswarm_mass <- readRDS(here("Figs", "boxplot_status_mass_beeswarm.rds"))
-
-
-#~~ Fig 2g: Swarmplot recruitment sMLH (based on the filtered dataset)
-beeswarm_sMLH <- readRDS(here("Figs", "boxplot_status_sMLH_beeswarm.rds"))
+#~~ Fig 2d: recruitment probability over time split by age
+p_R <- readRDS(here("Figs", "p_R_model.rds"))
 
 
 
@@ -141,6 +128,7 @@ beeswarm_sMLH <- readRDS(here("Figs", "boxplot_status_sMLH_beeswarm.rds"))
 bar_rec_new <- bar_rec_all + 
   scale_color_manual(values = c("black", "black"), labels=c('Non-recruited', 'Recruited')) + 
   scale_fill_manual(values = c(colblue, coltan), labels=c('Non-recruited', 'Recruited')) +
+  scale_x_discrete(breaks=seq(1995,2020,by=5))+
   ylab("No. of genotyped male pups") +
   coord_cartesian(ylim = c(0, 280)) +
   theme(legend.position="none")
@@ -148,9 +136,9 @@ bar_rec_new <- bar_rec_all +
 bar_rec_new
 
 
-#~~ Panel b: Age distribution recruitment
+#~~ Panel c: Age distribution recruitment
 p.age_new <- p.age + 
-  scale_fill_manual(values = colblue) + 
+  scale_fill_manual(values = coltan) + 
   scale_color_manual(values = "black") + 
   xlab("Age at recruitment") +
   theme_pubr() +
@@ -160,149 +148,76 @@ p.age_new <- p.age +
 p.age_new
 
 
-#~~ Panel c: Temporal model predictions
-p.BY_new <- p.BY +
-  scale_fill_manual(values = c(colblue, coltan)) +
-  scale_color_manual(values = c(coldarkb, coldarkt)) +
-  theme_pubr() +
-  theme(axis.text.y.right = element_blank(),
-        axis.ticks.y.right = element_blank(),
-        axis.line.y.right = element_blank()) +
-  xlab("Birth year")  +
-  ylab("sMLH") +
-  guides(size = "none", color = "none", fill = "none")
-
-p.BY_new
-
-
-#~~ Panel d: Full model effect sizes 
-p.mod_new <- p.mod + theme(legend.position="none")
-
-p.mod_new
-
-
-#~~ Panel e: Full model predictions SAM
-p.SAM_new <- p.SAM +
-  scale_fill_manual(values = c(colblue, coltan)) +
-  scale_color_manual(values = c(coldarkb, coldarkt)) + 
-  xlab("SAM birth year") +
-  theme_pubr() +
-  theme(axis.text.y.right = element_blank(),
-        axis.ticks.y.right = element_blank(),
-        axis.line.y.right = element_blank()) +
-  guides(size = "none", color = "none", fill = "none")
-
-p.SAM_new
-
-
-#~~ Panel f: Birth mass distribution recruits vs non recruits
-beeswarm_mass_new <- beeswarm_mass +
-  scale_fill_manual(values = c(colblue, coltan)) + 
-  scale_color_manual(values = c(coldarkb, coldarkt)) + 
-  theme_pubr()+
-  xlab("") + 
-  ylab("Birth mass") +
-  scale_x_discrete(labels=c("Non-recruited","Recruited")) +
-  theme(legend.position="none")
-
-beeswarm_mass_new
-
-
-#~~ Panel g: sMLH distribution recruits vs non recruits
-beeswarm_new <- beeswarm_sMLH +
-  scale_fill_manual(values = c(colblue, coltan)) + 
-  scale_color_manual(values = c(coldarkb, coldarkt)) + 
-  theme_pubr()+
-  xlab("") + 
-  ylab("sMLH") +
-  scale_x_discrete(labels=c("Non-recruited","Recruited")) +
-  theme(legend.position="none")
-
-beeswarm_new
-
-
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #  Combine and save figure 2  ####
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
-# Extract horizontal legend n individuals
-legend_p <- ggpubr::get_legend(
-  p.BY +
-    guides(color = "none", fill = "none") +
-    guides(shape = guide_legend(override.aes = list(size = 4))) +
-    theme_pubr() +
-    theme(legend.justification="left",
-          legend.box.just = "bottom")
-)
-
-# Extract horizontal legend status
-legend_p2 <- ggpubr::get_legend(
-  beeswarm_mass +
-    scale_color_manual("Status", values = c(colblue, coltan),
-                       aesthetics = c("color", "fill"),
-                       labels=c('Non-recruited', 'Recruited')) +
-    theme_pubr() +
-    theme(legend.justification="right",
-          legend.box.just = "bottom")
-)
-
 # get current margins: theme_get()$plot.margin
 
-
 #~~ Combine panels fig 2
+# Apply theme tweaks
+pa <- bar_rec_new + theme(axis.text = element_text(size = 11),
+                          axis.title = element_text(size = 13))
+pc <- p.age_new + theme(axis.text = element_text(size = 11),
+                        axis.title = element_text(size = 13))
+pb <- p_S + theme(axis.text = element_text(size = 11), 
+                  axis.title = element_text(size = 13),
+                  strip.text = element_text(size = 11),
+                  legend.title=element_text(size=13), 
+                  legend.text=element_text(size=11),
+                  panel.grid.major = element_blank(),
+                  panel.grid.minor = element_blank())
+pd <- p_R + theme(axis.text = element_text(size = 11),
+                  axis.title = element_text(size = 13),
+                  legend.title=element_text(size=13), 
+                  legend.text=element_text(size=11),
+                  panel.grid.major = element_blank(),
+                  panel.grid.minor = element_blank(),)
+
+# Pass 1: left edges of a, b, c
+al <- align_plots(pa, pb, pc, align = "v", axis = "l")
+
+# Pass 2: right edges of a, b, d (reusing the left-aligned versions)
+ar <- align_plots(al[[1]], al[[2]], pd, align = "v", axis = "r")
+
+row_cd <- plot_grid(al[[3]], ar[[3]],
+                     nrow = 1, labels = c("(c)", "(d)"),
+                     rel_widths = c(0.5, 1),
+                     label_fontface = "bold")
+
 all_plots <- plot_grid(
-  bar_rec_new + theme(axis.text=element_text(size=9.5), plot.margin=unit(c(5.5,5.5,5.5,6), "points")), #  
-  plot_grid(p.age_new + theme(plot.margin=unit(c(5.5,5.5,5.5,10), "points")), 
-            p.BY_new + theme(axis.text=element_text(size=9.5)),
-            p.mod_new, 
-            nrow = 1, labels = c('(b)', '(c)', '(d)'), label_fontface = "bold"), 
-  plot_grid(p.SAM_new + theme(plot.margin=unit(c(5.5,5.5,5.5,2), "points")), 
-            beeswarm_mass_new,
-            beeswarm_new,
-            nrow = 1, labels = c('(e)', '(f)', '(g)'), label_fontface = "bold"),
-  plot_grid(legend_p, legend_p2, nrow = 1),
-  nrow = 4,
-  rel_heights = c(1.3, 1, 1, .15),
-  labels = c("(a)", "", ""), 
+  ar[[1]], ar[[2]], row_cd, #legends,
+  ncol = 1,
+  rel_heights = c(1.15, 1, 1), #, 0.15),
+  labels = c("(a)", "(b)", ""),
   label_fontface = "bold"
 )
 
 all_plots
 
-save_plot(here("Figs", "fig2_male_recruitment_SAM_mass.jpg"), all_plots, base_width = 10, base_height = 10, dpi = 300)
+save_plot(here("Figs", "fig2_male_recruitment_mark_recapture.jpg"), all_plots, base_width = 10, base_height = 12, dpi = 300)
 
 
 
-# #~~ Combine forest plots year and SAM models n males
+# al <- align_plots(pa, pb, pc, pd, pe, pf, align = "v", axis = "lr")
 # 
-# # Load model figs
+# row_bcd <- plot_grid(al[[2]], al[[3]], al[[4]],
+#                      nrow = 1, labels = c("(b)", "(c)", "(d)"),
+#                      label_fontface = "bold")
 # 
-# mod.SAM <- readRDS(here("Figs", "Forest_plot_n_males_SAM.rds"))
+# row_ef <- plot_grid(al[[5]], al[[6]],
+#                     nrow = 2, labels = c("(e)", "(f)"),
+#                     label_fontface = "bold")
 # 
-# mod.year <- readRDS(here("Figs", "Forest_plot_n_males_year.rds"))
+# all_plots <- plot_grid(
+#   al[[1]], row_bcd, row_ef,
+#   ncol = 1,
+#   rel_heights = c(1.15, 0.9, 2),
+#   labels = c("(a)", "", ""),
+#   label_fontface = "bold"
+# )
 # 
-# # Make scale the same for all 3 models
-# 
-# mod.SAM_new <- mod.SAM +
-#   coord_cartesian(xlim = c(0.60, 1.15))
-# 
-# mod.year_new <- mod.year +
-#   coord_cartesian(xlim = c(0.60, 1.15))
-# 
-# # Combine figures
-# mod_all <- plot_grid(
-#   mod.year_new + xlab("") + theme(axis.text=element_text(size=10.5),
-#                                   axis.title=element_text(size=11),
-#                                   legend.position="none"),
-#   
-#   mod.SAM_new + xlab("") + theme(axis.text=element_text(size=10.5),
-#                                  axis.title.y=element_text(size=11),
-#                                  legend.position="none"),
-#   nrow = 3, align = "v",
-#   labels = c('(d)', '(e)', '(f)'), label_fontface = "bold", label_size = 12)
-# 
-# mod_all
-# 
-# cowplot::save_plot(here("Figs", "Forest_plot_n_male_SAM_year.jpg"), mod_all, base_width = 10, base_height = 8, dpi = 300)
-#
+# all_plots
+# save_plot(here("Figs", "fig2_test.jpg"), all_plots, base_width = 10, base_height = 12, dpi = 300)
+
