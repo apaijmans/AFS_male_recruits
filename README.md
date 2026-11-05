@@ -20,7 +20,7 @@ the R session, see `Rcode/session_info.txt`.
 
 ## Usage
 
-Download the complete repository. Before running the scripts, download the input data from [Zenodo](https://doi.org/10.5281/zenodo.19680323) and place the files in the `Data/raw/` folder. The repository already contains this folder at the correct location. Run the scripts in the `Rcode` folder in order (1a → 1b → 2 → 3a → 3b → 4).
+Download the complete repository. Before running the scripts, download the input data from [Zenodo](https://doi.org/10.5281/zenodo.19680323) and place the files in the `Data/raw/` folder. The repository already contains this folder at the correct location. Run the scripts in the `Rcode` folder in order (1a → 1b → 2 → 3a → 3b → 3c → 4).
 
 ## Scripts
 
