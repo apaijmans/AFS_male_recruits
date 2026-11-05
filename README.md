@@ -27,10 +27,11 @@ Download the complete repository. Before running the scripts, download the input
 | Script | Description |
 |---|---|
 | `1a_wrangle_obs_data.R` | Imports observational location data for adult males (observed-only and tissue-sampled) to calculate annual male counts. Also adds the SAM index. Outputs `n_observed_males.xlsx`. |
-| `1b_wrangle_data.R` | Three-part wrangling script. (1) Uses genetic recapture data to calculate annual male counts (annual number of genetically sampled unique males, `total_n_males.xlsx`). (2) Calculates individual-level variables (first/last recapture year, age at recapture, skipping behaviour) and outputs `all_males_wrangled.xlsx`. (3) Combines natal recaptures with non-recaptured male pups, adds fitness data, sMLH and SAM values, and produces Fig. 1d. Outputs `males_sMLH_fitness.xlsx`. |
+| `1b_wrangle_data.R` | Three-part wrangling script. (1) Uses genetic recapture data to calculate annual male counts (annual number of genetically sampled unique males, `total_n_males.xlsx`). (2) Calculates individual-level variables (first/last recapture year, age at recapture, skipping behaviour) and outputs `all_males_wrangled.xlsx`. (3) Combines natal recaptures with non-recaptured male pups, adds fitness data, sMLH and SAM values, and produces Fig. 1d. Outputs `males_sMLH_fitness.xlsx`. (4) Generates input for file mark-recapture analysis `male_pups_sMLH_fitness.csv`. |
 | `2_explore_data_n_males.R` | Generates panels for Fig. 1: annual male counts (Fig. 1c) and number of recaptures (Fig. 1b). Final figure aesthetics are handled in `4_figs.R`. |
-| `3a_stats_n_males.R` | Runs GLMs testing the effects of year and SAM on male counts (modelled separately due to collinearity). Produces Tables 1a and 1b. |
-| `3b_stats_recruitment.R` | Runs GLMs testing the effects of various predictors on male recruitment, including a temporal model (year) and a full model (SAM and other predictors). Also tests for a cohort effect on recruitment age before and after 2009. Produces Tables 2a and 2b and all panels for Fig. 2. Final figure aesthetics are handled in `4_figs.R`. |
+| `3a_stats_n_males.R` | Runs GLMs testing the effects of year and SAM on male counts. Produces Table 1. |
+| `3b_stats_recruitment.R` | Tests for a cohort effect on recruitment age before and after 2009. Produces figure panels 2a and 2c. Final figure aesthetics are handled in `4_figs.R`. |
+| `3c_mark-recapture-model-figs.R` | Produces Table 2 and panels Fig. 2b and 2d. Final figure aesthetics are handled in `4_figs.R`. |
 | `4_figs.R` | Applies final aesthetics to figure panels and combines them to produce Figs. 1 and 2. |
 
 ## Repository Structure
@@ -43,6 +44,7 @@ AFS_male_recruits/
 │   ├── 2_explore_data_n_males.R
 │   ├── 3a_stats_n_males.R
 │   ├── 3b_stats_recruitment.R
+│   ├── 3c_mark-recapture-model-figs.R
 │   ├── 4_figs.R
 |   └── session_info.txt
 ├── Data/
