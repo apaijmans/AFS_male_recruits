@@ -142,6 +142,18 @@ ggplot(data = melted_cors, aes(x=X1, y=X2, fill=value)) +
 # FirstRecaptureYear and BirthYear highly correlated. 
 # But FirstRecaptureYear is not in the model, so no problem
 
+#~~ Check for collinearity including only parameters included in model
+melted_cors <- reshape::melt(pups12 %>% 
+                               select(sMLH_39msat, PupWeight, PupBirthyear, SAMBirthyear) %>% 
+                               mutate_all(as.numeric) %>% 
+                               cor(use = 'pair'))
+
+ggplot(data = melted_cors, aes(x=X1, y=X2, fill=value)) + 
+  geom_tile() +
+  geom_text(aes(label = round(value, 3)), size = 3) +
+  scale_fill_gradient2(low = "blue", high = "red",
+                       limit = c(-1,1), name="Correlation") 
+# SAMBirthYear and PupBirthYear highest corrlation 0.257
 
 #~~ Cleaned df
 pups12.complete <- pups12 %>%
@@ -247,6 +259,32 @@ bar_rec_all_years_unfiltered
 
 # Save fig 2a
 saveRDS(bar_rec_all_years_unfiltered, here("Figs", "barplot_males_per_year_39loci_all_years_unfiltered.rds"))
+
+#~~ Percentage recruits per year
+# Pups genotyped at 39 loci
+pups39 %>%
+  filter(!is.na(sMLH_39msat)) %>%
+  select(uniqueID, PupBirthyear, status) %>%
+  distinct(uniqueID, .keep_all = T) %>%
+  group_by(PupBirthyear, status) %>%
+  tally() %>%
+  mutate(Total = sum(n), PercentRecruits = n/Total) %>%
+  filter(status == "Recruited") %>%
+  ggplot(aes(x = PupBirthyear, y = PercentRecruits, fill = PupBirthyear < 2009)) +
+  geom_bar(stat = "identity", width = 1) +
+  xlab("Birth year") +
+  ylab("Percentage recruits") +
+  # Color incomplete recruitment histories grey
+  scale_fill_manual(values = c(`FALSE` = "grey", `TRUE` = "grey35"), guide = "none") +
+  # Absolute numbers above the bars: recruits / total pups
+  geom_text(aes(label = paste0(n, "/", Total)),
+            angle = 90, hjust = -0.15, size = 3) +
+  # Extra space at the top so the labels aren't cut off
+  scale_y_continuous(expand = expansion(mult = c(0, 0.3))) +
+  theme_pubr() +
+  theme(legend.position="none")
+
+save_plot(here("Figs", "percentage_recruits_per_year.jpg"), width = 12, height = 6, dpi = 300)
 
 
 #~~ Age at recruitment (fig 2c)
